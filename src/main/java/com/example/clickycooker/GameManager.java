@@ -1,11 +1,13 @@
 package com.example.clickycooker;
 
 import com.almasb.fxgl.dsl.FXGL;
+import com.almasb.fxgl.entity.Entity;
+import com.almasb.fxgl.time.Timer;
+import com.almasb.fxgl.time.TimerAction;
 import javafx.animation.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
@@ -21,8 +23,9 @@ import org.json.simple.parser.ParseException;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Random;
-import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 
 public class GameManager implements Stage {
@@ -36,33 +39,49 @@ public class GameManager implements Stage {
     private static int clickSpeed;
     private static int autoClickSpeed;
     private static Text cookiesLabel;
-    private final ArrayList<Upgradeable> upgradeables;
+    private static Text autoClickSpeedLabel;
+    private static final ArrayList<Upgradeable> upgradeables = new ArrayList<>();
 
-    public GameManager() throws IOException, ParseException {
+    private static Achievement achievement;
+
+    public GameManager() throws IOException, ParseException, InterruptedException {
         cookies = 0;
         clickSpeed = 1;
         autoClickSpeed = 0;
-        this.upgradeables = new ArrayList<>();
+        achievement = new Achievement();
 
         loadUpgradeables();
-        createMilk();
+        //createMilk();
         createCookie();
         createShop();
-        createCookiesLabel();
+        createLabels();
 
-        Timer timer = new Timer();
 
-        timer.schedule(new TimerTask() {
+
+        TimerAction timer = FXGL.getGameTimer().runAtInterval (new TimerTask() {
             @Override
             public void run() {
                 changeCookies(autoClickSpeed);
             }
-        }, 1000, 1000);
+        }, Duration.millis(1000));
     }
 
-    public void changeCookies(int cookies) {
-        GameManager.cookies += cookies;
-        updateCookiesLabel();
+    public void changeCookies(int n) {
+        cookies += n;
+        cookiesLabel.setText("Cookies: " + cookies);
+
+        if (achievement.haveAchievement(cookies)) {
+            try {
+                achievement.obtainAchievement(cookies);
+            } catch (IOException | ParseException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    public void changeAutoClickSpeed(int speed) {
+        autoClickSpeed += speed;
+        autoClickSpeedLabel.setText("speed: " + autoClickSpeed + "/s");
     }
 
     private void loadUpgradeables() throws IOException, ParseException {
@@ -87,6 +106,7 @@ public class GameManager implements Stage {
         iv.setImage(new Image(TEXTURE_PATH + "cookie.png"));
         iv.setFitHeight(COOKIE_SIZE);
         iv.setFitWidth(COOKIE_SIZE);
+
         draw(iv, COOKIE_X - COOKIE_SIZE / 2, COOKIE_Y - COOKIE_SIZE / 2);
 
         iv.setOnMouseClicked(e -> {
@@ -107,18 +127,27 @@ public class GameManager implements Stage {
 
 
             changeCookies(clickSpeed);
-            updateCookiesLabel();
             createCookieClone(mouseX, mouseY);
         });
     }
 
-    private void createCookiesLabel() {
-        cookiesLabel = new Text("Cookies: 0");
-        cookiesLabel.setX(50);
+    private void createLabels() {
+        String cookiesText = "Cookies: 0";
+        cookiesLabel = new Text(cookiesText);
+        cookiesLabel.setX(COOKIE_X);
         cookiesLabel.setY(50);
         cookiesLabel.setFill(Color.BLACK);
         cookiesLabel.setStyle("-fx-font: 24 arial");
         draw(cookiesLabel);
+
+        String autoClickSpeedText = "speed: 0/sec";
+        autoClickSpeedLabel = new Text(autoClickSpeedText);
+        autoClickSpeedLabel.setX(COOKIE_X);
+        autoClickSpeedLabel.setY(70);
+        autoClickSpeedLabel.setFill(Color.BLACK);
+        autoClickSpeedLabel.setStyle("-fx-font: 16 arial");
+        draw(autoClickSpeedLabel);
+
     }
 
     private void createCookieClone(double x, double y) {
@@ -155,35 +184,35 @@ public class GameManager implements Stage {
     }
 
     private void createMilk() {
-        double waveShiftTime = 2000;
+        double waveShiftTime = 10000;
         double waveSize = 100;
 
         Rectangle rect = new Rectangle(550, 200);
         rect.setX(0);
         rect.setY(300);
         rect.setOpacity(.5);
-        rect.setFill(Paint.valueOf("BROWN"));
+        rect.setFill(Color.BROWN);
         draw(rect);
 
         for (int i=0; i<4; i++) {
             Circle wave = new Circle(waveSize);
             wave.setCenterX(i*150);
             wave.setCenterY(250);
-            wave.setFill(Paint.valueOf("WHITE"));
+            wave.setFill(Color.WHITE);
             draw(wave);
 
             Translate translate = new Translate();
             wave.getTransforms().add(translate);
 
-            double timeToEnd = (550-i*150)/(waveShiftTime/2);
+            double timeToMidPoint = (550-i*150)/(waveShiftTime/2);
             double distanceToStart = i*150+waveSize/2;
-            double timeToStart = distanceToStart/(waveShiftTime/2);
+            double timeToEnd = distanceToStart/(waveShiftTime/2);
 
             Timeline timeline = new Timeline(
                     new KeyFrame(Duration.ZERO, new KeyValue(translate.xProperty(), 0)),
-                    new KeyFrame(Duration.millis(timeToEnd), new KeyValue(translate.xProperty(), 550)),
-                    new KeyFrame(Duration.millis(timeToEnd+.001), new KeyValue(translate.xProperty(), -distanceToStart)),
-                    new KeyFrame(Duration.millis(timeToStart), new KeyValue(translate.xProperty(), 0))
+                    new KeyFrame(Duration.millis(timeToMidPoint), new KeyValue(translate.xProperty(), 550)),
+                    new KeyFrame(Duration.millis(timeToMidPoint+.001), new KeyValue(translate.xProperty(), -distanceToStart)),
+                    new KeyFrame(Duration.millis(timeToEnd), new KeyValue(translate.xProperty(), 0))
             );
 
             timeline.setCycleCount(-1);
@@ -195,7 +224,7 @@ public class GameManager implements Stage {
         Rectangle rect = new Rectangle(250, 500);
         rect.setX(550);
         rect.setY(0);
-        rect.setFill(Paint.valueOf("BLUE"));
+        rect.setFill(Color.BLUE);
         draw(rect);
 
         for (int i = 0; i < upgradeables.size(); i++) {
@@ -209,20 +238,15 @@ public class GameManager implements Stage {
         }
     }
 
-    private void updateCookiesLabel() {
-        cookiesLabel.setText("Cookies: " + cookies);
-    }
-
     public void buy(Upgradeable upgradeable) {
         int cost = upgradeable.getCost();
         int speed = upgradeable.getSpeed();
         boolean isAffordable = cookies >= cost;
 
         if (isAffordable) {
-            cookies -= cost;
-            updateCookiesLabel();
+            changeCookies(-cost);
+            changeAutoClickSpeed(speed);
 
-            autoClickSpeed += speed;
             upgradeable.updateCost();
             upgradeable.spawn();
         }

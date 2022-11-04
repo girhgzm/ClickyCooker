@@ -2,12 +2,8 @@ package com.example.clickycooker;
 
 import com.almasb.fxgl.entity.Entity;
 import javafx.animation.*;
-import javafx.scene.canvas.Canvas;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
@@ -15,9 +11,6 @@ import javafx.scene.text.Text;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 import javafx.util.Duration;
-
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class Upgradeable implements Stage {
     private final String name;
@@ -90,7 +83,8 @@ public class Upgradeable implements Stage {
         iv.setY(100 * i);
         draw(iv);
 
-        Rectangle button = new Rectangle(150, 50, Paint.valueOf("CYAN"));
+        Rectangle button = new Rectangle(150, 50);
+        button.setFill(Color.GRAY);
         button.setX(600);
         button.setY(100 * i);
         draw(button);

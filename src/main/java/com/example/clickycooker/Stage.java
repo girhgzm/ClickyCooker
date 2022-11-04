@@ -18,7 +18,11 @@ public interface Stage {
         return FXGL.entityBuilder().at(x,y).view(node).buildAndAttach();
     }
 
+    default void addEntity(Entity ... entities) {
+        FXGL.getGameWorld().addEntities(entities);
+    }
     default void removeNode(Node node) {
         FXGL.removeUINode(node);
     }
+
 }

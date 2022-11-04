@@ -1,0 +1,11 @@
+{
+  "1": {
+    "title": "Getting started!", "imagePath": "cookie.png"
+  },
+  "100": {
+    "title": "Hundred!", "imagePath": "hundred.png"
+  },
+  "500": {
+    "title": "Five Hundred!", "imagePath": "fiveHundred.png"
+  }
+}
