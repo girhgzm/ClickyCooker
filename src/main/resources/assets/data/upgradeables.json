@@ -1,0 +1,6 @@
+{"upgradeables":[
+  {"name":"Cursor", "cost": 50, "speed": 1, "imagePath": "cursor.png"},
+  {"name": "Your mom", "cost": 200, "speed": 10, "imagePath": "yourmom.png"},
+  {"name": "Minecart", "cost": 4000, "speed": 100, "imagePath": "minecart.png"},
+  {"name": "Factory", "cost": 16000, "speed": 1000, "imagePath": "factory.png"}
+]}
