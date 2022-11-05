@@ -2,15 +2,21 @@ package com.example.clickycooker;
 
 import com.almasb.fxgl.dsl.FXGL;
 import com.almasb.fxgl.entity.Entity;
-import javafx.animation.KeyFrame;
-import javafx.animation.KeyValue;
-import javafx.animation.Timeline;
 import javafx.scene.Node;
-import javafx.scene.transform.Rotate;
-import javafx.util.Duration;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+
+import java.io.FileReader;
+import java.io.IOException;
 
 
 public interface Stage {
+    default JSONObject readJson(String path) throws IOException, ParseException {
+        JSONParser parser = new JSONParser();
+        return (JSONObject) parser.parse(new FileReader(path));
+    }
+
     default Entity draw(Node node) {
         return FXGL.entityBuilder().at(0,0).view(node).buildAndAttach();
     }

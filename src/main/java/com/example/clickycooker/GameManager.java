@@ -1,9 +1,6 @@
 package com.example.clickycooker;
 
 import com.almasb.fxgl.dsl.FXGL;
-import com.almasb.fxgl.entity.Entity;
-import com.almasb.fxgl.time.Timer;
-import com.almasb.fxgl.time.TimerAction;
 import javafx.animation.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -16,20 +13,16 @@ import javafx.scene.transform.Translate;
 import javafx.util.Duration;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-
 import java.io.*;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Random;
 import java.util.TimerTask;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 
 public class GameManager implements Stage {
-    private static final String UPGRADEABLES_DATA_PATH = "src/main/resources/assets/data/upgradeables.json";
+    private static final String UPGRADES_DATA_PATH = "src/main/resources/assets/data/upgradeables.json";
     private static final String TEXTURE_PATH = "assets/textures/";
 
     public static final double COOKIE_X = 200.0;
@@ -40,30 +33,78 @@ public class GameManager implements Stage {
     private static int autoClickSpeed;
     private static Text cookiesLabel;
     private static Text autoClickSpeedLabel;
-    private static final ArrayList<Upgradeable> upgradeables = new ArrayList<>();
+    private static final HashMap<String, Upgrade> upgrades = new HashMap<>();
 
     private static Achievement achievement;
+    private static Data data;
 
-    public GameManager() throws IOException, ParseException, InterruptedException {
-        cookies = 0;
+    public GameManager() throws IOException, ParseException {
+        data = new Data();
+
+        HashMap<String, Integer> playerData = data.load();
+
+        cookies = playerData.get("cookies");
         clickSpeed = 1;
-        autoClickSpeed = 0;
         achievement = new Achievement();
 
-        loadUpgradeables();
-        //createMilk();
-        createCookie();
+        Achievement.setLastAchievement(playerData.get("milestone"));
+
+        playerData.remove("cookies");
+        playerData.remove("milestone");
+
         createShop();
+        createCookie();
+
+        loadUpgrades();
+
+        //Set count and autoClickSpeed
+        int r = 0;
+        for (String name : playerData.keySet()) {
+            int count = playerData.get(name);
+
+            Upgrade upgrade = upgrades.get(name);
+
+            for (int n=0; n<count; n++) {
+                upgrade.spawn(r);
+                r++;
+            }
+
+            int cost = (int) (upgrade.getCost()*Math.pow(1.2, count));
+            upgrade.setCost(cost);
+
+            autoClickSpeed += upgrade.calculateAutoClickSpeed();
+        }
+
         createLabels();
 
-
-
-        TimerAction timer = FXGL.getGameTimer().runAtInterval (new TimerTask() {
+        //Game loop
+        FXGL.getGameTimer().runAtInterval (new TimerTask() {
             @Override
             public void run() {
                 changeCookies(autoClickSpeed);
+                try {
+                    saveData();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }, Duration.millis(1000));
+    }
+
+    private void saveData() throws IOException {
+        HashMap<String, Integer> playerData = new HashMap<>();
+
+        playerData.put("cookies", cookies);
+        playerData.put("milestone", Achievement.getLastAchievement());
+
+        for (String name : upgrades.keySet()) {
+            Upgrade upgrade = upgrades.get(name);
+            int count = upgrade.getCount();
+
+            playerData.put(name, count);
+        }
+
+        data.save(playerData);
     }
 
     public void changeCookies(int n) {
@@ -84,20 +125,25 @@ public class GameManager implements Stage {
         autoClickSpeedLabel.setText("speed: " + autoClickSpeed + "/s");
     }
 
-    private void loadUpgradeables() throws IOException, ParseException {
-        JSONParser parser = new JSONParser();
-        JSONObject jsonObject = (JSONObject) parser.parse(new FileReader(UPGRADEABLES_DATA_PATH));
+    private void loadUpgrades() throws IOException, ParseException {
+        JSONObject jsonObject = readJson(UPGRADES_DATA_PATH);
         JSONArray jsonArray = (JSONArray) jsonObject.get("upgradeables");
 
+        int i = 0;
         for (Object o : jsonArray) {
             JSONObject obj = (JSONObject) o;
             String name = (String) obj.get("name");
             int cost = ((Long) obj.get("cost")).intValue();
             int speed = ((Long) obj.get("speed")).intValue();
             String imagePath = TEXTURE_PATH + obj.get("imagePath");
-            System.out.println(imagePath);
 
-            upgradeables.add(new Upgradeable(this, name, cost, speed, imagePath));
+            Upgrade upgrade = new Upgrade(name, cost, speed, imagePath);
+            GameManager.upgrades.put(name, upgrade);
+
+            Rectangle button = upgrade.createButton(i);
+            button.setOnMouseClicked(e -> buy(upgrade));
+
+            i++;
         }
     }
 
@@ -132,7 +178,7 @@ public class GameManager implements Stage {
     }
 
     private void createLabels() {
-        String cookiesText = "Cookies: 0";
+        String cookiesText = "Cookies: " + cookies;
         cookiesLabel = new Text(cookiesText);
         cookiesLabel.setX(COOKIE_X);
         cookiesLabel.setY(50);
@@ -140,7 +186,7 @@ public class GameManager implements Stage {
         cookiesLabel.setStyle("-fx-font: 24 arial");
         draw(cookiesLabel);
 
-        String autoClickSpeedText = "speed: 0/sec";
+        String autoClickSpeedText = "speed: " + autoClickSpeed + "/sec";
         autoClickSpeedLabel = new Text(autoClickSpeedText);
         autoClickSpeedLabel.setX(COOKIE_X);
         autoClickSpeedLabel.setY(70);
@@ -152,7 +198,6 @@ public class GameManager implements Stage {
 
     private void createCookieClone(double x, double y) {
         Random random = new Random();
-        int n = random.nextInt(-100, 100);
         int p = random.nextBoolean() ? 1 : -1;
 
         ImageView iv = new ImageView();
@@ -226,29 +271,19 @@ public class GameManager implements Stage {
         rect.setY(0);
         rect.setFill(Color.BLUE);
         draw(rect);
-
-        for (int i = 0; i < upgradeables.size(); i++) {
-            Upgradeable upgradeable = upgradeables.get(i);
-            System.out.println(upgradeable.getName());
-            Rectangle button = upgradeable.createButton(i);
-
-            button.setOnMouseClicked(e -> {
-                buy(upgradeable);
-            });
-        }
     }
 
-    public void buy(Upgradeable upgradeable) {
-        int cost = upgradeable.getCost();
-        int speed = upgradeable.getSpeed();
+    public void buy(Upgrade upgrade) {
+        int cost = upgrade.getCost();
+        int speed = upgrade.getSpeed();
         boolean isAffordable = cookies >= cost;
 
         if (isAffordable) {
             changeCookies(-cost);
             changeAutoClickSpeed(speed);
 
-            upgradeable.updateCost();
-            upgradeable.spawn();
+            upgrade.updateCost();
+            upgrade.spawn();
         }
     }
 }

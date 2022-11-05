@@ -1,18 +1,16 @@
 package com.example.clickycooker;
 
-import com.almasb.fxgl.entity.Entity;
 import javafx.animation.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.paint.Color;
-import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 import javafx.util.Duration;
 
-public class Upgradeable implements Stage {
+public class Upgrade implements Stage {
     private final String name;
     private int cost;
     private final int speed;
@@ -21,7 +19,7 @@ public class Upgradeable implements Stage {
 
     private Text costLabel;
 
-    public Upgradeable(GameManager gm, String name, int cost, int speed, String imagePath) {
+    public Upgrade(String name, int cost, int speed, String imagePath) {
         this.name = name;
         this.cost = cost;
         this.speed = speed;
@@ -41,7 +39,20 @@ public class Upgradeable implements Stage {
         return speed;
     }
 
-    private void createClone() {
+    public int getCount() {
+        return count;
+    }
+
+    public void setCost(int cost) {
+        this.cost = cost;
+        costLabel.setText(name + ": " + cost);
+    }
+
+    public int calculateAutoClickSpeed() {
+        return count * speed;
+    }
+
+    private void createClone(int rot) {
         double x = GameManager.COOKIE_X;
         double y = GameManager.COOKIE_Y;
         double s = GameManager.COOKIE_SIZE;
@@ -56,7 +67,7 @@ public class Upgradeable implements Stage {
         iv.setFitHeight(is);
         iv.setFitWidth(is);
 
-        Entity entity = draw(iv);
+        draw(iv);
 
         Translate translate = new Translate();
 
@@ -66,9 +77,9 @@ public class Upgradeable implements Stage {
         iv.getTransforms().addAll(rotation, translate);
 
         Timeline timeline = new Timeline(
-                new KeyFrame(Duration.ZERO, new KeyValue(rotation.angleProperty(), 0), new KeyValue(translate.xProperty(), 0)),
-                new KeyFrame(Duration.seconds(30), new KeyValue(rotation.angleProperty(), 180), new KeyValue(translate.xProperty(), 0)),
-                new KeyFrame(Duration.seconds(60), new KeyValue(rotation.angleProperty(), 360), new KeyValue(translate.xProperty(), 0))
+                new KeyFrame(Duration.ZERO, new KeyValue(rotation.angleProperty(), rot), new KeyValue(translate.xProperty(), 0)),
+                new KeyFrame(Duration.seconds(30), new KeyValue(rotation.angleProperty(), rot+180), new KeyValue(translate.xProperty(), 0)),
+                new KeyFrame(Duration.seconds(60), new KeyValue(rotation.angleProperty(), rot+360), new KeyValue(translate.xProperty(), 0))
         );
         timeline.setCycleCount(-1);
         timeline.play();
@@ -107,7 +118,12 @@ public class Upgradeable implements Stage {
 
     public void spawn() {
         count++;
-        createClone();
+        createClone(0);
+    }
+
+    public void spawn(int rot) {
+        count ++;
+        createClone(rot);
     }
 
 }

@@ -11,10 +11,8 @@ import javafx.scene.text.Text;
 import javafx.scene.transform.Translate;
 import javafx.util.Duration;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
 
@@ -25,14 +23,21 @@ public class Achievement implements Stage {
     private static JSONObject jsonObject;
 
     public Achievement() throws IOException, ParseException {
-        JSONParser parser = new JSONParser();
-        jsonObject = (JSONObject) parser.parse(new FileReader(FILE_PATH));
+        jsonObject = readJson(FILE_PATH);
 
         Object[] set = jsonObject.keySet().toArray();
         milestoneList = Arrays.stream(set)
                 .mapToInt(i->Integer.parseInt((String) i))
                 .sorted()
                 .toArray();
+    }
+
+    public static int getLastAchievement() {
+        return lastAchievement;
+    }
+
+    public static void setLastAchievement(int milestone) {
+        lastAchievement = milestone;
     }
 
     private int[] getObtainedMilestones(int n) {
