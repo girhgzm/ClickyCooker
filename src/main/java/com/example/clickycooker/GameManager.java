@@ -39,6 +39,8 @@ public class GameManager implements Stage {
     private static Data data;
 
     public GameManager() throws IOException, ParseException {
+        EventManager em = new EventManager(this);
+
         createShop();
         createCookie();
 
@@ -51,7 +53,10 @@ public class GameManager implements Stage {
         FXGL.getGameTimer().runAtInterval (new TimerTask() {
             @Override
             public void run() {
+                em.start();
+
                 changeCookies(autoClickSpeed);
+
                 try {
                     saveData();
                 } catch (IOException e) {
