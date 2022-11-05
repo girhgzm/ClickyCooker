@@ -39,6 +39,29 @@ public class GameManager implements Stage {
     private static Data data;
 
     public GameManager() throws IOException, ParseException {
+        createShop();
+        createCookie();
+
+        loadUpgrades();
+        loadData();
+
+        createLabels();
+
+        //Game loop
+        FXGL.getGameTimer().runAtInterval (new TimerTask() {
+            @Override
+            public void run() {
+                changeCookies(autoClickSpeed);
+                try {
+                    saveData();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }, Duration.millis(1000));
+    }
+
+    private void loadData() throws IOException, ParseException {
         data = new Data();
 
         HashMap<String, Integer> playerData = data.load();
@@ -51,11 +74,6 @@ public class GameManager implements Stage {
 
         playerData.remove("cookies");
         playerData.remove("milestone");
-
-        createShop();
-        createCookie();
-
-        loadUpgrades();
 
         //Set count and autoClickSpeed
         int r = 0;
@@ -74,21 +92,6 @@ public class GameManager implements Stage {
 
             autoClickSpeed += upgrade.calculateAutoClickSpeed();
         }
-
-        createLabels();
-
-        //Game loop
-        FXGL.getGameTimer().runAtInterval (new TimerTask() {
-            @Override
-            public void run() {
-                changeCookies(autoClickSpeed);
-                try {
-                    saveData();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }, Duration.millis(1000));
     }
 
     private void saveData() throws IOException {
